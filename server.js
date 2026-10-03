@@ -88,6 +88,10 @@ import shuffle from './utils/shuffle.js';
 import express from 'express';
 var app = express();
 
+function isLoopbackRequest(req) {
+  return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress);
+}
+
 // disable cors
 import cors from 'cors';
 import cityGen from './serverUtils/cityGen.js';
@@ -329,6 +333,7 @@ setTimeout(() => {
 }, 2000);
 
 app.get('/allCountries.json', (req, res) => {
+    if (!isLoopbackRequest(req)) return res.status(404).json({ error: 'Not found' });
     // 60s, matching /countryLocations and cron's 60s resample of the world
     // pool. At 600s the CDN and the browser pinned ONE 2,000-location slice per
     // player for ten minutes, so every game started in that window drew from
@@ -374,6 +379,7 @@ for (const country of countries) {
   countryLocations[country] = [];
 }
 app.get('/countryLocations/:country', (req, res) => {
+  if (!isLoopbackRequest(req)) return res.status(404).json({ error: 'Not found' });
   // 60s only: cron rotates the served window every 30s and this route's own
   // in-memory cache is 60s. A longer CDN/browser TTL pins one 2000-location
   // slice for every game a player starts in that window, which is where the
@@ -426,6 +432,7 @@ fetch('http://localhost:3003/countryLocations/'+req.params.country)
 // awards XP like the World map; name stamps communityMapName so results
 // screens and storeGame read "ChinaGuessr". lng -> long happens here.
 app.get('/chinaLocations', (req, res) => {
+  if (!isLoopbackRequest(req)) return res.status(404).json({ error: 'Not found' });
   res.set('Cache-Control', 'public, max-age=60, s-maxage=60');
   res.json({
     ready: chinaPool.length > 0,
@@ -443,6 +450,7 @@ app.get('/chinaLocations', (req, res) => {
 });
 
 app.get('/mapLocations/:slug', async (req, res) => {
+  if (!isLoopbackRequest(req)) return res.status(404).json({ error: 'Not found' });
   const slug = req.params.slug;
   // recachegoose signature is .cache(ttlSeconds, customKey) — the old
   // swapped-arg call silently fell back to the 60s default TTL. The long TTL
